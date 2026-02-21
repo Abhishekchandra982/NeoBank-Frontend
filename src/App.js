@@ -1,13 +1,28 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import { useState } from "react";
+
 import Register from "./pages/Register";
 import Login from "./pages/Login";
 import UserDashboard from "./pages/UserDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 import ProtectedRoute from "./routes/ProtectedRoute";
+import Navbar from "./components/Navbar";
 
-function App() {
+function AppWrapper() {
+  const location = useLocation();
+  const [darkMode, setDarkMode] = useState(false);
+
+  // Routes where navbar should NOT appear
+  const hideNavbarRoutes = ["/", "/login"];
+
+  const shouldShowNavbar = !hideNavbarRoutes.includes(location.pathname);
+
   return (
-    <BrowserRouter>
+    <>
+      {shouldShowNavbar && (
+        <Navbar darkMode={darkMode} setDarkMode={setDarkMode} />
+      )}
+
       <Routes>
         <Route path="/" element={<Register />} />
         <Route path="/login" element={<Login />} />
@@ -16,7 +31,7 @@ function App() {
           path="/user"
           element={
             <ProtectedRoute requiredRole="USER">
-              <UserDashboard />
+              <UserDashboard darkMode={darkMode} />
             </ProtectedRoute>
           }
         />
@@ -25,12 +40,19 @@ function App() {
           path="/admin"
           element={
             <ProtectedRoute requiredRole="ADMIN">
-              <AdminDashboard />
+              <AdminDashboard darkMode={darkMode} />
             </ProtectedRoute>
           }
         />
-
       </Routes>
+    </>
+  );
+}
+
+function App() {
+  return (
+    <BrowserRouter>
+      <AppWrapper />
     </BrowserRouter>
   );
 }
