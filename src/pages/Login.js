@@ -4,12 +4,15 @@ import api from "../api/axios";
 import { setToken } from "../utils/token";
 
 function Login() {
+
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
     email: "",
     password: ""
   });
+
+  const [errorMessage, setErrorMessage] = useState("");
 
   const handleChange = (e) => {
     setFormData({
@@ -26,8 +29,12 @@ function Login() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    setErrorMessage("");
+
     try {
+
       const response = await api.post("/auth/login", formData);
+
       const token = response.data.token;
 
       setToken(token);
@@ -42,20 +49,23 @@ function Login() {
       }
 
     } catch (error) {
-      alert("Invalid credentials");
+      setErrorMessage("Invalid email or password");
     }
   };
 
   return (
     <div style={styles.container}>
       <div style={styles.card}>
+
         <h2 style={styles.title}>Welcome Back to NeoBank</h2>
 
         <form onSubmit={handleSubmit}>
+
           <input
             type="email"
             name="email"
             placeholder="Email Address"
+            value={formData.email}
             onChange={handleChange}
             required
             style={styles.input}
@@ -65,22 +75,39 @@ function Login() {
             type="password"
             name="password"
             placeholder="Password"
+            value={formData.password}
             onChange={handleChange}
             required
             style={styles.input}
           />
 
+          <p
+            style={styles.forgot}
+            onClick={() => navigate("/forgot-password")}
+          >
+            Forgot Password?
+          </p>
+
           <button type="submit" style={styles.primaryBtn}>
             Login
           </button>
+
         </form>
+
+        {errorMessage && (
+          <p style={styles.error}>{errorMessage}</p>
+        )}
 
         <p style={styles.switchText}>
           Don’t have an account?{" "}
-          <span style={styles.link} onClick={() => navigate("/")}>
+          <span
+            style={styles.link}
+            onClick={() => navigate("/")}
+          >
             Register
           </span>
         </p>
+
       </div>
     </div>
   );
@@ -94,6 +121,7 @@ const styles = {
     alignItems: "center",
     background: "#f4f7fb"
   },
+
   card: {
     width: "380px",
     background: "white",
@@ -101,11 +129,13 @@ const styles = {
     borderRadius: "12px",
     boxShadow: "0 10px 30px rgba(0,0,0,0.1)"
   },
+
   title: {
     textAlign: "center",
     marginBottom: "25px",
     color: "#1e3a8a"
   },
+
   input: {
     width: "100%",
     padding: "12px",
@@ -114,6 +144,15 @@ const styles = {
     border: "1px solid #ddd",
     fontSize: "14px"
   },
+
+  forgot: {
+    textAlign: "right",
+    fontSize: "13px",
+    color: "#2563eb",
+    cursor: "pointer",
+    marginBottom: "15px"
+  },
+
   primaryBtn: {
     width: "100%",
     padding: "12px",
@@ -124,15 +163,23 @@ const styles = {
     fontWeight: "bold",
     cursor: "pointer"
   },
+
   switchText: {
     marginTop: "20px",
     textAlign: "center",
     fontSize: "14px"
   },
+
   link: {
     color: "#2563eb",
     cursor: "pointer",
     fontWeight: "bold"
+  },
+
+  error: {
+    marginTop: "15px",
+    color: "red",
+    textAlign: "center"
   }
 };
 
