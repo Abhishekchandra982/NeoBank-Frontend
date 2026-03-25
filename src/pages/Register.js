@@ -11,6 +11,11 @@ function Register() {
     password: ""
   });
 
+  const [otp, setOtp] = useState("");
+  const [isOtpStep, setIsOtpStep] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  // Handle input change
   const handleChange = (e) => {
     setFormData({
       ...formData,
@@ -18,67 +23,165 @@ function Register() {
     });
   };
 
+  // ===============================
+  // STEP 1 → REGISTER (SEND OTP)
+  // ===============================
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true);
 
     try {
-      await api.post("/auth/register", formData);
+      const response = await api.post("/auth/register", formData);
+
+      // ✅ Works for both 200 & 201
+      if (response.status === 200 || response.status === 201) {
+        alert(response.data.message || "OTP sent to your email");
+        setIsOtpStep(true);
+      }
+
+    } catch (error) {
+      const status = error.response?.status;
+
+      if (status === 409) {
+        alert(error.response.data.message); // Email already exists
+      } else {
+        // ⚠️ fallback (important)
+        alert("OTP might be sent. Please check your email.");
+        setIsOtpStep(true);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ===============================
+  // STEP 2 → VERIFY OTP
+  // ===============================
+  const handleVerifyOtp = async () => {
+    if (!otp) {
+      alert("Please enter OTP");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      await api.post("/auth/verify-registration-otp", {
+        email: formData.email,
+        otp: otp
+      });
+
       alert("Registration successful!");
       navigate("/login");
+
     } catch (error) {
-      alert(error.response?.data?.message || "Registration failed");
+      alert(error.response?.data?.message || "Invalid OTP");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ===============================
+  // RESEND OTP
+  // ===============================
+  const handleResendOtp = async () => {
+    try {
+      await api.post("/auth/register", formData);
+      alert("OTP resent successfully!");
+    } catch (error) {
+      alert("Failed to resend OTP");
     }
   };
 
   return (
     <div style={styles.container}>
       <div style={styles.card}>
-        <h2 style={styles.title}>Create Your NeoBank Account</h2>
 
-        <form onSubmit={handleSubmit}>
-          <input
-            type="text"
-            name="fullName"
-            placeholder="Full Name"
-            onChange={handleChange}
-            required
-            style={styles.input}
-          />
+        {!isOtpStep ? (
+          <>
+            <h2 style={styles.title}>Create Your NeoBank Account</h2>
 
-          <input
-            type="email"
-            name="email"
-            placeholder="Email Address"
-            onChange={handleChange}
-            required
-            style={styles.input}
-          />
+            <form onSubmit={handleSubmit}>
+              <input
+                type="text"
+                name="fullName"
+                placeholder="Full Name"
+                onChange={handleChange}
+                required
+                style={styles.input}
+              />
 
-          <input
-            type="password"
-            name="password"
-            placeholder="Password"
-            onChange={handleChange}
-            required
-            style={styles.input}
-          />
+              <input
+                type="email"
+                name="email"
+                placeholder="Email Address"
+                onChange={handleChange}
+                required
+                style={styles.input}
+              />
 
-          <button type="submit" style={styles.primaryBtn}>
-            Create Account
-          </button>
-        </form>
+              <input
+                type="password"
+                name="password"
+                placeholder="Password"
+                onChange={handleChange}
+                required
+                style={styles.input}
+              />
 
-        <p style={styles.switchText}>
-          Already have an account?{" "}
-          <span style={styles.link} onClick={() => navigate("/login")}>
-            Login
-          </span>
-        </p>
+              <button
+                type="submit"
+                style={styles.primaryBtn}
+                disabled={loading}
+              >
+                {loading ? "Sending OTP..." : "Create Account"}
+              </button>
+            </form>
+
+            <p style={styles.switchText}>
+              Already have an account?{" "}
+              <span style={styles.link} onClick={() => navigate("/login")}>
+                Login
+              </span>
+            </p>
+          </>
+        ) : (
+          <>
+            <h2 style={styles.title}>Verify OTP</h2>
+
+            <input
+              type="text"
+              placeholder="Enter OTP"
+              value={otp}
+              onChange={(e) => setOtp(e.target.value)}
+              style={styles.input}
+            />
+
+            <button
+              onClick={handleVerifyOtp}
+              style={styles.primaryBtn}
+              disabled={loading}
+            >
+              {loading ? "Verifying..." : "Verify OTP"}
+            </button>
+
+            <p style={styles.switchText}>
+              Didn’t receive OTP?{" "}
+              <span style={styles.link} onClick={handleResendOtp}>
+                Resend
+              </span>
+            </p>
+          </>
+        )}
+
       </div>
     </div>
   );
 }
 
+// ===============================
+// STYLES
+// ===============================
 const styles = {
   container: {
     minHeight: "90vh",
