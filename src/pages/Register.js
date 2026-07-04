@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api/axios";
+import logo from "../assets/logo.png";
 
 function Register() {
+
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
@@ -14,96 +16,190 @@ function Register() {
   const [otp, setOtp] = useState("");
   const [isOtpStep, setIsOtpStep] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
-  // Handle input change
+  const [message, setMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
+
+  const getPasswordStrength = () => {
+
+    const pwd = formData.password;
+
+    if (pwd.length < 6) return "Weak";
+
+    if (
+      pwd.match(/[A-Z]/) &&
+      pwd.match(/[0-9]/)
+    ) {
+      return "Strong";
+    }
+
+    return "Medium";
+  };
+
   const handleChange = (e) => {
+
     setFormData({
       ...formData,
       [e.target.name]: e.target.value
     });
+
   };
 
-  // ===============================
-  // STEP 1 → REGISTER (SEND OTP)
-  // ===============================
   const handleSubmit = async (e) => {
+
     e.preventDefault();
+
     setLoading(true);
 
+    setErrorMessage("");
+    setMessage("");
+
     try {
-      const response = await api.post("/auth/register", formData);
 
-      // ✅ Works for both 200 & 201
-      if (response.status === 200 || response.status === 201) {
-        alert(response.data.message || "OTP sent to your email");
-        setIsOtpStep(true);
-      }
+      const response = await api.post(
+        "/auth/register",
+        formData
+      );
 
-    } catch (error) {
-      const status = error.response?.status;
+      setMessage(
+        response.data.message ||
+        "OTP sent successfully!"
+      );
 
-      if (status === 409) {
-        alert(error.response.data.message); // Email already exists
+      setIsOtpStep(true);
+
+    } catch (err) {
+
+      if (err.response) {
+
+        // RATE LIMIT
+        if (err.response.status === 429) {
+
+          setErrorMessage(
+            err.response.data.message ||
+            "Too many registration attempts. Try again later."
+          );
+
+        }
+
+        // EMAIL ALREADY EXISTS
+        else if (err.response.status === 409) {
+
+          setErrorMessage(
+            err.response.data.message ||
+            "Email already exists"
+          );
+
+        }
+
+        // OTHER BACKEND ERRORS
+        else {
+
+          setErrorMessage(
+            err.response.data.message ||
+            "Registration failed"
+          );
+
+        }
+
       } else {
-        // ⚠️ fallback (important)
-        alert("OTP might be sent. Please check your email.");
-        setIsOtpStep(true);
+
+        setErrorMessage(
+          "Server not responding"
+        );
+
       }
+
     } finally {
+
       setLoading(false);
+
     }
   };
 
-  // ===============================
-  // STEP 2 → VERIFY OTP
-  // ===============================
   const handleVerifyOtp = async () => {
+
     if (!otp) {
-      alert("Please enter OTP");
-      return;
+      return setErrorMessage("Enter OTP");
     }
 
     setLoading(true);
 
+    setErrorMessage("");
+    setMessage("");
+
     try {
-      await api.post("/auth/verify-registration-otp", {
-        email: formData.email,
-        otp: otp
-      });
 
-      alert("Registration successful!");
-      navigate("/login");
+      const response = await api.post(
+        "/auth/verify-registration-otp",
+        {
+          email: formData.email,
+          otp
+        }
+      );
 
-    } catch (error) {
-      alert(error.response?.data?.message || "Invalid OTP");
+      setMessage(
+        response.data.message ||
+        "Registration successful!"
+      );
+
+      setTimeout(() => {
+        navigate("/login");
+      }, 1500);
+
+    } catch (err) {
+
+      if (err.response) {
+
+        setErrorMessage(
+          err.response.data.message ||
+          err.response.data ||
+          "Invalid OTP"
+        );
+
+      } else {
+
+        setErrorMessage(
+          "Server not responding"
+        );
+
+      }
+
     } finally {
-      setLoading(false);
-    }
-  };
 
-  // ===============================
-  // RESEND OTP
-  // ===============================
-  const handleResendOtp = async () => {
-    try {
-      await api.post("/auth/register", formData);
-      alert("OTP resent successfully!");
-    } catch (error) {
-      alert("Failed to resend OTP");
+      setLoading(false);
+
     }
   };
 
   return (
+
     <div style={styles.container}>
+
+      {/* Animated Background */}
+      <div style={styles.blob1}></div>
+      <div style={styles.blob2}></div>
+      <div style={styles.blob3}></div>
+
       <div style={styles.card}>
+
+        <img
+          src={logo}
+          alt="logo"
+          style={styles.logo}
+        />
 
         {!isOtpStep ? (
           <>
-            <h2 style={styles.title}>Create Your NeoBank Account</h2>
+
+            <h2 style={styles.title}>
+              Create Account
+            </h2>
 
             <form onSubmit={handleSubmit}>
+
               <input
-                type="text"
                 name="fullName"
                 placeholder="Full Name"
                 onChange={handleChange}
@@ -112,69 +208,123 @@ function Register() {
               />
 
               <input
-                type="email"
                 name="email"
-                placeholder="Email Address"
+                type="email"
+                placeholder="Email"
                 onChange={handleChange}
                 required
                 style={styles.input}
               />
 
-              <input
-                type="password"
-                name="password"
-                placeholder="Password"
-                onChange={handleChange}
-                required
-                style={styles.input}
-              />
+              <div style={{ position: "relative" }}>
+
+                <input
+                  type={
+                    showPassword
+                      ? "text"
+                      : "password"
+                  }
+                  name="password"
+                  placeholder="Password"
+                  onChange={handleChange}
+                  required
+                  style={styles.input}
+                />
+
+                <span
+                  onClick={() =>
+                    setShowPassword(!showPassword)
+                  }
+                  style={styles.eye}
+                >
+                  {showPassword ? "🙈" : "👁"}
+                </span>
+
+              </div>
+
+              <p style={styles.strength}>
+                Strength: {getPasswordStrength()}
+              </p>
 
               <button
-                type="submit"
-                style={styles.primaryBtn}
+                style={styles.btn}
                 disabled={loading}
               >
-                {loading ? "Sending OTP..." : "Create Account"}
+                {loading
+                  ? "Processing..."
+                  : "Create Account"}
               </button>
+
             </form>
 
-            <p style={styles.switchText}>
+            {message && (
+              <p style={styles.success}>
+                {message}
+              </p>
+            )}
+
+            {errorMessage && (
+              <p style={styles.error}>
+                {errorMessage}
+              </p>
+            )}
+
+            <p style={styles.switch}>
+
               Already have an account?{" "}
-              <span style={styles.link} onClick={() => navigate("/login")}>
+
+              <span
+                onClick={() => navigate("/login")}
+                style={styles.link}
+              >
                 Login
               </span>
+
             </p>
+
           </>
         ) : (
           <>
-            <h2 style={styles.title}>Verify OTP</h2>
+
+            <h2 style={styles.title}>
+              Verify OTP
+            </h2>
 
             <input
-              type="text"
               placeholder="Enter OTP"
               value={otp}
-              onChange={(e) => setOtp(e.target.value)}
+              onChange={(e) =>
+                setOtp(e.target.value)
+              }
               style={styles.input}
             />
 
             <button
               onClick={handleVerifyOtp}
-              style={styles.primaryBtn}
-              disabled={loading}
+              style={styles.btn}
             >
-              {loading ? "Verifying..." : "Verify OTP"}
+              {loading
+                ? "Verifying..."
+                : "Verify OTP"}
             </button>
 
-            <p style={styles.switchText}>
-              Didn’t receive OTP?{" "}
-              <span style={styles.link} onClick={handleResendOtp}>
-                Resend
-              </span>
-            </p>
+            {message && (
+              <p style={styles.success}>
+                {message}
+              </p>
+            )}
+
+            {errorMessage && (
+              <p style={styles.error}>
+                {errorMessage}
+              </p>
+            )}
+
           </>
         )}
 
       </div>
+
     </div>
   );
 }
@@ -183,53 +333,140 @@ function Register() {
 // STYLES
 // ===============================
 const styles = {
+
   container: {
-    minHeight: "90vh",
+    minHeight: "100vh",
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
-    background: "#f4f7fb"
+    position: "relative",
+    overflow: "hidden",
+    background:
+      "linear-gradient(-45deg, #1e3a8a, #2563eb, #9333ea, #06b6d4)",
+    backgroundSize: "400% 400%",
+    animation: "gradientMove 10s ease infinite"
   },
+
   card: {
-    width: "380px",
-    background: "white",
-    padding: "40px",
-    borderRadius: "12px",
-    boxShadow: "0 10px 30px rgba(0,0,0,0.1)"
+    width: "90%",
+    maxWidth: "520px",
+    padding: "45px",
+    borderRadius: "20px",
+    background: "rgba(255,255,255,0.15)",
+    backdropFilter: "blur(12px)",
+    boxShadow: "0 20px 40px rgba(0,0,0,0.2)",
+    color: "#fff",
+    zIndex: 1
   },
+
+  logo: {
+    width: "80px",
+    margin: "0 auto 10px",
+    display: "block"
+  },
+
   title: {
     textAlign: "center",
-    marginBottom: "25px",
-    color: "#1e3a8a"
+    marginBottom: "20px"
   },
+
   input: {
     width: "100%",
-    padding: "12px",
+    padding: "14px",
     marginBottom: "15px",
-    borderRadius: "8px",
-    border: "1px solid #ddd",
-    fontSize: "14px"
-  },
-  primaryBtn: {
-    width: "100%",
-    padding: "12px",
-    background: "#2563eb",
-    color: "white",
+    borderRadius: "10px",
     border: "none",
-    borderRadius: "8px",
+    background: "rgba(255,255,255,0.2)",
+    color: "#fff"
+  },
+
+  btn: {
+    width: "100%",
+    padding: "14px",
+    borderRadius: "10px",
+    border: "none",
+    background: "#fff",
+    color: "#1e3a8a",
     fontWeight: "bold",
     cursor: "pointer"
   },
-  switchText: {
-    marginTop: "20px",
+
+  switch: {
     textAlign: "center",
-    fontSize: "14px"
+    marginTop: "15px"
   },
+
   link: {
-    color: "#2563eb",
     cursor: "pointer",
     fontWeight: "bold"
+  },
+
+  eye: {
+    position: "absolute",
+    right: "10px",
+    top: "12px",
+    cursor: "pointer"
+  },
+
+  strength: {
+    fontSize: "13px",
+    marginBottom: "10px"
+  },
+
+  success: {
+    marginTop: "15px",
+    color: "#4ade80",
+    textAlign: "center",
+    fontWeight: "bold"
+  },
+
+  error: {
+    marginTop: "15px",
+    color: "#ff4d4f",
+    textAlign: "center",
+    fontWeight: "bold"
+  },
+
+  blob1: {
+    position: "absolute",
+    width: "300px",
+    height: "300px",
+    background: "#3b82f6",
+    borderRadius: "50%",
+    top: "-100px",
+    left: "-100px",
+    filter: "blur(120px)",
+    opacity: 0.7,
+    animation: "float1 8s ease-in-out infinite"
+  },
+
+  blob2: {
+    position: "absolute",
+    width: "300px",
+    height: "300px",
+    background: "#9333ea",
+    borderRadius: "50%",
+    bottom: "-100px",
+    right: "-100px",
+    filter: "blur(120px)",
+    opacity: 0.7,
+    animation: "float2 10s ease-in-out infinite"
+  },
+
+  blob3: {
+    position: "absolute",
+    width: "200px",
+    height: "200px",
+    background: "#06b6d4",
+    borderRadius: "50%",
+    top: "50%",
+    left: "50%",
+    transform: "translate(-50%, -50%)",
+    filter: "blur(100px)",
+    opacity: 0.5,
+    animation: "float3 12s ease-in-out infinite"
   }
+
 };
 
 export default Register;

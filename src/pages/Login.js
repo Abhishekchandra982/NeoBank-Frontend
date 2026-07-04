@@ -27,19 +27,24 @@ function Login() {
   };
 
   const handleSubmit = async (e) => {
+
     e.preventDefault();
 
     setErrorMessage("");
 
     try {
 
-      const response = await api.post("/auth/login", formData);
+      const response = await api.post(
+        "/auth/login",
+        formData
+      );
 
       const token = response.data.token;
 
       setToken(token);
 
       const decoded = decodeToken(token);
+
       const role = decoded.role;
 
       if (role === "ADMIN") {
@@ -49,15 +54,68 @@ function Login() {
       }
 
     } catch (error) {
-      setErrorMessage("Invalid email or password");
+
+      if (error.response) {
+
+        // RATE LIMIT
+        if (error.response.status === 429) {
+
+          setErrorMessage(
+            error.response.data.message ||
+            error.response.data ||
+            "Too many login attempts. Try again later."
+          );
+
+        }
+
+        // EMAIL NOT VERIFIED
+        else if (error.response.status === 403) {
+
+          setErrorMessage(
+            error.response.data.message ||
+            "Please verify your email first"
+          );
+
+        }
+
+        // INVALID PASSWORD
+        else if (error.response.status === 401) {
+
+          setErrorMessage(
+            error.response.data.message ||
+            "Invalid email or password"
+          );
+
+        }
+
+        // OTHER BACKEND ERRORS
+        else {
+
+          setErrorMessage(
+            error.response.data.message ||
+            "Login failed"
+          );
+
+        }
+
+      } else {
+
+        setErrorMessage(
+          "Server not responding"
+        );
+
+      }
     }
   };
 
   return (
     <div style={styles.container}>
+
       <div style={styles.card}>
 
-        <h2 style={styles.title}>Welcome Back to NeoBank</h2>
+        <h2 style={styles.title}>
+          Welcome Back to NeoBank
+        </h2>
 
         <form onSubmit={handleSubmit}>
 
@@ -83,37 +141,48 @@ function Login() {
 
           <p
             style={styles.forgot}
-            onClick={() => navigate("/forgot-password")}
+            onClick={() =>
+              navigate("/forgot-password")
+            }
           >
             Forgot Password?
           </p>
 
-          <button type="submit" style={styles.primaryBtn}>
+          <button
+            type="submit"
+            style={styles.primaryBtn}
+          >
             Login
           </button>
 
         </form>
 
         {errorMessage && (
-          <p style={styles.error}>{errorMessage}</p>
+          <p style={styles.error}>
+            {errorMessage}
+          </p>
         )}
 
         <p style={styles.switchText}>
           Don’t have an account?{" "}
+
           <span
             style={styles.link}
             onClick={() => navigate("/")}
           >
             Register
           </span>
+
         </p>
 
       </div>
+
     </div>
   );
 }
 
 const styles = {
+
   container: {
     minHeight: "90vh",
     display: "flex",
@@ -179,7 +248,8 @@ const styles = {
   error: {
     marginTop: "15px",
     color: "red",
-    textAlign: "center"
+    textAlign: "center",
+    fontWeight: "bold"
   }
 };
 
