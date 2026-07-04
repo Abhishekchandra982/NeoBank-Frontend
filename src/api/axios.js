@@ -2,7 +2,7 @@ import axios from "axios";
 
 // Create axios instance
 const api = axios.create({
-  baseURL: "http://localhost:8080",
+  baseURL: "https://neobank-vfvw.onrender.com",
 });
 
 // Add interceptor to attach JWT token automatically
@@ -16,9 +16,7 @@ api.interceptors.request.use(
 
     return config;
   },
-  (error) => {
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
 export default api;
